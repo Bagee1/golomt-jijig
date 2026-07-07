@@ -1,0 +1,439 @@
+Энэ даалгаврыг зүгээр CRUD систем биш, **Enterprise Architecture**-тай төсөл болгож өргөтгөвөл Голомт банк шиг байгууллагын хэрэгцээнд илүү ойр болно. Чиний санаа болох **"систем бүртгэхэд шинэ service үндсэн системд холбогддог"** гэдэг нь үнэндээ Microservice Registry буюу Service Catalog-ийн санаатай төстэй бөгөөд хэрэгжүүлэхэд боломжтой.
+
+## Санал болгож буй архитектур
+
+```
+                    React Admin Portal
+                            │
+                    Spring Cloud Gateway
+                            │
+     ----------------------------------------------------
+     │            │             │              │
+ Auth Service  System Service  Registry     Security Service
+                   │            Service
+                   │              │
+                   └──────────────┘
+                          │
+                    PostgreSQL
+```
+
+Цаашлаад
+
+```
+Notification Service
+Audit Log Service
+Config Server
+Discovery Server (Eureka)
+```
+
+нэмбэл бүр enterprise болно.
+
+---
+
+# Гол санааг өөрчлөх
+
+Даалгаварт
+
+> Системийн бүртгэл хийх
+
+гэсэн байгаа.
+
+Үүнийг
+
+> Байгууллагын бүх системийг бүртгэж удирдах төв систем
+
+болгож өргөтгө.
+
+Жишээ
+
+```
+Card Service
+Core Banking
+Digital Banking
+Loan Service
+HR Service
+CRM Service
+```
+
+эдгээрийг бүртгэнэ.
+
+---
+
+# Бүртгэхдээ зөвхөн нэр биш
+
+Дараах мэдээллийг хадгалдаг болговол илүү бодит болно.
+
+```
+Service Name
+
+Service URL
+
+Swagger URL
+
+Health URL
+
+Version
+
+Owner Team
+
+Port
+
+Environment
+
+Database
+
+Git Repository
+
+Status
+
+Last Deploy Date
+
+API Count
+
+```
+
+---
+
+# Шинэ service нэмэх процесс
+
+## 1.
+
+Developer шинэ сервис хөгжүүлнэ.
+
+Жишээ
+
+```
+Loan Service
+```
+
+Spring Boot
+
+---
+
+## 2.
+
+React дээр
+
+```
+Register New Service
+```
+
+гэдэг form байна.
+
+```
+Name
+
+Base URL
+
+Swagger URL
+
+Version
+
+Developer
+
+Database
+
+```
+
+---
+
+## 3.
+
+Register дарахад
+
+System Service
+
+```
+POST /services
+```
+
+дуудна.
+
+---
+
+## 4.
+
+System Service
+
+Registry Service рүү
+
+```
+register()
+```
+
+дуудна.
+
+Registry дээр
+
+```
+ACTIVE
+```
+
+болгоно.
+
+---
+
+## 5.
+
+Gateway Config шинэчлэгдэнэ.
+
+Жишээ
+
+```
+loan-service
+
+↓
+
+http://localhost:8085
+```
+
+---
+
+## 6.
+
+React дээр
+
+```
+Loan Service
+
+● Running
+```
+
+гэж харагдана.
+
+---
+
+# Security Check-г илүү бодит болгох
+
+Даалгаварт
+
+> Мэдээллийн аюулгүй байдлын стандарт шалгах
+
+гэсэн.
+
+Үүнийг
+
+Service бүрийн security compliance болгож болно.
+
+Жишээ
+
+✔ HTTPS ашиглаж байна уу
+
+✔ JWT хэрэглэж байна уу
+
+✔ Swagger хамгаалагдсан уу
+
+✔ Health endpoint байна уу
+
+✔ Version байгаа юу
+
+✔ Audit Log хийдэг үү
+
+✔ CORS зөв үү
+
+✔ Secret environment-д хадгалсан уу
+
+Дараа нь
+
+```
+Security Score
+
+92%
+```
+
+гардаг.
+
+---
+
+# Dashboard хий
+
+React дээр
+
+```
+System Dashboard
+
+----------------------------
+
+Total Services
+
+18
+
+Running
+
+16
+
+Stopped
+
+2
+
+Average Security
+
+91%
+
+```
+
+---
+
+# Health Check
+
+Бүртгэсэн Service болгон
+
+```
+GET
+
+/actuator/health
+```
+
+дууддаг.
+
+React дээр
+
+🟢 UP
+
+🔴 DOWN
+
+шиг харагдана.
+
+---
+
+# Swagger холбох
+
+Service бүр
+
+```
+http://localhost:8082/swagger-ui/index.html
+```
+
+гэх мэт URL-тай байна.
+
+React дээр
+
+```
+View API
+```
+
+дарвал шууд Swagger нээгдэнэ.
+
+---
+
+# Log Service
+
+Service нэмэгдэх бүр
+
+```
+Admin registered Loan Service
+
+2026-07-06
+
+```
+
+Audit Log хадгална.
+
+---
+
+# Notification
+
+Шинэ service нэмэгдэхэд
+
+```
+Email
+
+or
+
+Slack
+
+notification
+```
+
+явуулж болно.
+
+---
+
+# Database
+
+## services
+
+```
+id
+
+name
+
+type
+
+base_url
+
+swagger_url
+
+health_url
+
+version
+
+developer
+
+status
+
+created_at
+```
+
+---
+
+## security_check
+
+```
+id
+
+service_id
+
+https
+
+jwt
+
+cors
+
+swagger
+
+health
+
+score
+```
+
+---
+
+## audit_log
+
+```
+id
+
+user
+
+action
+
+service
+
+created_at
+```
+
+---
+
+# Ашиглах Tech Stack
+
+| Layer             | Technology                                        |
+| ----------------- | ------------------------------------------------- |
+| Frontend          | React + Vite + Material UI + React Router + Axios |
+| API Gateway       | Spring Cloud Gateway                              |
+| Authentication    | Spring Security + JWT                             |
+| Service Registry  | Spring Cloud Eureka                               |
+| Backend           | Spring Boot Microservices                         |
+| Database          | PostgreSQL                                        |
+| ORM               | Spring Data JPA                                   |
+| Configuration     | Spring Cloud Config                               |
+| Monitoring        | Spring Boot Actuator                              |
+| Service Discovery | Eureka                                            |
+| API Documentation | Swagger/OpenAPI                                   |
+| Containerization  | Docker + Docker Compose                           |
+
+## Миний санал
+
+Хэрэв энэ төслийг **ажлын ярилцлагын даалгавар** эсвэл **дипломын ажил** түвшинд хөгжүүлэх гэж байгаа бол **"Service Registry & Management Platform"** гэсэн концепцоор хийх нь илүү оновчтой.
+
+Ингэснээр энэ нь энгийн "систем бүртгэх CRUD" биш, харин байгууллагын бүх Spring Boot микросервисүүдийг **бүртгэх, хянах, аюулгүй байдлыг үнэлэх, API болон health status-ийг удирдах төв платформ** болж өргөжинө. Энэ нь микросервис архитектурын гол ойлголтууд (Gateway, Discovery, Registry, Monitoring, Security)-ыг нэг төсөлд харуулдаг тул техникийн ярилцлага болон портфолиод илүү өндөр үнэлгээ авах боломжтой.
