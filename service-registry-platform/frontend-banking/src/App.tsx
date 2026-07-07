@@ -7,8 +7,11 @@ import { AccountsAdminPage } from './pages/AccountsAdminPage'
 import { BankAuditLogPage } from './pages/BankAuditLogPage'
 import { CustomerFormPage } from './pages/CustomerFormPage'
 import { CustomersPage } from './pages/CustomersPage'
+import { DepositDetailPage } from './pages/DepositDetailPage'
+import { DepositsAdminPage } from './pages/DepositsAdminPage'
 import { DepositsPage } from './pages/DepositsPage'
 import { LoginPage } from './pages/LoginPage'
+import { NewDepositPage } from './pages/NewDepositPage'
 import { NewTransferPage } from './pages/NewTransferPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { StatementPage } from './pages/StatementPage'
@@ -44,6 +47,9 @@ function BankingRoutes() {
       <Route path="/transfers/new" element={<NewTransferPage />} />
       <Route path="/transfers/:id" element={<TransferDetailPage />} />
       <Route path="/deposits" element={<DepositsPage />} />
+      <Route path="/deposits/new" element={<NewDepositPage />} />
+      <Route path="/deposits/:id" element={<DepositDetailPage />} />
+      <Route path="/admin/deposits" element={<AdminRoute><DepositsAdminPage /></AdminRoute>} />
       <Route path="/admin/customers" element={<AdminRoute><CustomersPage /></AdminRoute>} />
       <Route path="/admin/customers/new" element={<AdminRoute><CustomerFormPage /></AdminRoute>} />
       <Route path="/admin/customers/:id" element={<AdminRoute><CustomerFormPage /></AdminRoute>} />
