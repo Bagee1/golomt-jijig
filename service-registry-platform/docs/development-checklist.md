@@ -32,6 +32,9 @@ Demo нэвтрэлт: admin/admin123 (теллер), batbold/demo123 + sarnai/d
 Git түүх үргэлжилж байгаа, ажил бүрт commit хийж байгаа.
 Хоёр service жинхэнэ Postgres дээр шалгагдсан: migration OK, health UP, e2e transfer demo амжилттай.
 banking-transfer-service platform-api-ийн JWT-г шаарддаг (shared JWT_SECRET, resource server).
+deposit-service (3 дахь microservice, 8085, Postgres 5434): хугацаатай хадгаламж, banking-ийг ЖИНХЭНЭ
+  HTTP-ээр дуудаж санхүүжүүлж/эргэн төлдөг (registry-ийн CALLS хамаарал бодит болсон), 29 тест ногоон,
+  Docker бүтэн stack (8 контейнер) дээр e2e батлагдсан.
 ```
 
 Одоогийн гол blocker:
@@ -593,8 +596,8 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 - [x] Д7: Frontend — types/deposit, depositHttpClient (VITE_DEPOSIT_API_URL:8085, DepositApiError), depositErrors (pass-through нь bankErrorMessage-руу fallback), depositApi (8 функц), format+Chips (DepositStatusChip), nav «Хадгаламж»+admin «Хадгаламжийн бүртгэл», DepositsPage (бүтээгдэхүүний картууд + миний хадгаламжууд), /deposits route. tsc+lint+build цэвэр.
 - [x] Д8: Frontend — NewDepositPage (өөрийн данс сонгох, хугацаа/хүү, client-side урьдчилсан хүү «сервер эцэслэнэ», crypto.randomUUID key, амжилтын panel), DepositDetailPage (үлдсэн хоног, статусаар товч: хаах/эрт хаах ConfirmDialog «хүү 0₮» анхааруулгатай + retry-funding/retry-payout), DepositsAdminPage (username filter + Pagination), 4 route. tsc+lint+build цэвэр.
 - [x] Д9: Infra — deposit-service Dockerfile (EXPOSE 8085), compose (deposit-postgres 5434 + volume + healthcheck, deposit-service 8085 env: DB/JWT/BANKING_API_URL/PLATFORM_API_URL/SVC creds/depends_on, frontend-banking-д VITE_DEPOSIT_API_URL build arg), .env.example DEPOSIT_* блок, CI: deposit-service job + дутуу байсан frontend-banking job, branch main. compose config valid, deposit+frontend-banking image build амжилттай.
-- [ ] Д10: Docs — deposit-api-contract.md, DBRD, README.
-- [ ] Д11: E2E demo (нээх→үлдэгдэл буурах→эрт/хугацаатай хаах→502 сэргэлт→registry CALLS) + Verification log.
+- [x] Д10: Docs — `deposit-api-contract.md` (эрх/settlement/статус/хүү/endpoint/3 идемпотент/ErrorCode/тохиргоо/хялбарчлал), DBRD §11.b (deposit DB + cross-service soft link), README (scope, svc-deposit, 8085 Swagger, run section).
+- [x] Д11: E2E demo (Docker бүтэн stack, 8 контейнер) — нээх→үлдэгдэл 700,000→эрт хаах хүү 0→1,000,000; matured хаах хүү 37,500→1,037,500; settlement 100,300,000; банк унтраах→502+FUNDING→retry OPEN; registry 4 систем + deposit→banking CALLS; audit бүрэн; 2 frontend 200.
 
 ## 5. Blocked list
 
@@ -694,6 +697,11 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 | 2026-07-08 | `npx tsc -b` + `npm run lint` + `npm run build` (deposit frontend API+DepositsPage) | PASS | frontend-banking 1816 модуль, oxlint цэвэр |
 | 2026-07-08 | `npx tsc -b` + `npm run lint` + `npm run build` (NewDeposit/Detail/Admin хуудсууд) | PASS | 309KB bundle, oxlint цэвэр — хадгаламжийн бүрэн UI урсгал |
 | 2026-07-08 | `docker compose config` + `docker compose build deposit-service frontend-banking` | PASS | compose syntax зөв (3 backend + 3 Postgres + 2 frontend); deposit multi-stage build ба frontend-banking (VITE_DEPOSIT_API_URL-тэй) build амжилттай |
+| 2026-07-08 | `docker compose up -d --build` (бүтэн stack, 8 контейнер) | PASS | 3 backend health 200, 3 Postgres healthy, 2 frontend 200; шинэ V6/V8 seed цэвэр ассан |
+| 2026-07-08 | Deposit e2e (нээх + эрт хаалт) | PASS | batbold нээв DEP-5001 OPEN, үлдэгдэл 1,000,000→700,000, settlement→100,300,000; эрт хаалт CLOSED_EARLY хүү 0 payout 300,000, үлдэгдэл→1,000,000 |
+| 2026-07-08 | Deposit e2e (matured хаалт) | PASS | DEP-5002 backdate 365 хоног @12.5% → CLOSED хүү 37,500 payout 337,500, үлдэгдэл→1,037,500 |
+| 2026-07-08 | Deposit e2e (банк унтарсан failure/recovery) | PASS | banking stop→нээх 502 BANKING_UNAVAILABLE, мөр FUNDING хэвээр; banking start→retry-funding OPEN + funding ref |
+| 2026-07-08 | Registry integration шалгалт | PASS | admin `GET /api/systems`-д deposit-service (CORE, 8085) + deposit→banking CALLS relation бодит; deposit audit-д OPENED/FUNDING_FAILED/CLOSED/CLOSED_EARLY бичигдсэн |
 
 ## 8. Files created so far
 

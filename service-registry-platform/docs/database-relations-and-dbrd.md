@@ -558,6 +558,25 @@ system_api_documents
 
 - swagger/openapi document metadata хадгална.
 
+## 11.b. Deposit service DB (тусдаа Postgres 5434, `deposit_service`)
+
+`deposit-service` нь database-per-service зарчмаар өөрийн тусдаа Postgres-тэй. Харилцагчийн
+хүснэгт ДАВХАРДУУЛАХГҮЙ — cross-service холбоос нь soft reference (FK биш):
+
+- **`deposits`** (V1): `id`, `deposit_no` (unique), `client_request_key` (nullable unique —
+  browser идемпотент), `customer_username` (↔ platform `users.username`), `linked_account_no`
+  (↔ banking `accounts.account_no`), `principal`, `annual_rate`, `term_months`, `opened_at`,
+  `maturity_date`, `status` CHECK(FUNDING/OPEN/PAYOUT_PENDING/CLOSED/CLOSED_EARLY/CANCELLED),
+  `close_type` CHECK(EARLY/MATURED), `interest_amount`, `payout_amount`, `funding_transfer_ref`
+  (↔ banking `transfers.transfer_ref`), `payout_transfer_ref`, `failure_reason`, `closed_at`.
+  Sequence `deposit_no_seq` (DEP-5001-ээс).
+- **`deposit_audit_logs`** (V1): banking-ийн `bank_audit_logs`-тэй ижил бүтэц — actor нь JWT-ээс
+  авсан snapshot (users platform DB-д тул FK боломжгүй).
+
+Cross-service мөнгөний холбоос: хадгаламжийн үндсэн дүн banking-ийн settlement данс `900000001`
+(эзэн `svc-deposit`)-д банкны transfer-ээр байршиж, хаахад мөн банкны transfer-ээр буцна. Хоёр
+DB-ийн хооронд шууд FK байхгүй — зөвхөн transfer_ref/username/account_no-гоор логик холбогдоно.
+
 ## 12. Implementation rule
 
 DB migration дүрэм:

@@ -29,7 +29,12 @@ Current checkpoint:
 - Banking audit log (`bank_audit_logs`) with actor snapshots
 - Machine-readable error codes (`code` field in error responses)
 - Banking service requires the platform JWT (shared JWT_SECRET, resource server)
-- Both services verified on real PostgreSQL (migrations, health, e2e transfer demo)
+- **Deposit Service (3rd microservice): term deposits (3/6/12 months, interest),
+  funded/paid out through REAL HTTP calls to the banking transfer service —
+  making the registry's `deposit-service CALLS banking-transfer-service`
+  relation real. Status lifecycle FUNDING/OPEN/PAYOUT_PENDING/CLOSED/CLOSED_EARLY,
+  settlement-account model, service-token payouts, safe retries**
+- All three services verified on real PostgreSQL (migrations, health, e2e demo)
 - GitHub Actions CI workflow (activates after remote push)
 - No password/secret fallbacks: services fail fast when env vars are missing
 
@@ -60,12 +65,15 @@ docs/banking-api-contract.md
 | `sarnai` | `demo123` | Bank customer (account 100000002) |
 
 Customer users come from dev-only seed data (`db/seed-dev`) and are linked to
-banking customers via `customers.username`.
+banking customers via `customers.username`. There is also a non-human
+`svc-deposit` service account (VIEWER) that owns the deposit settlement account
+and is used only by deposit-service for payout transfers — not for login.
 
 ## Run Everything with Docker (new machine friendly)
 
-The whole stack — 2 PostgreSQL, both backends and both frontends — runs with
-one command. Only Docker Desktop is required on the host (no JDK/Maven/Node).
+The whole stack — 3 PostgreSQL, three backends (platform-api, banking-transfer-service,
+deposit-service) and both frontends — runs with one command. Only Docker Desktop
+is required on the host (no JDK/Maven/Node).
 
 ```powershell
 docker compose up -d --build
@@ -74,9 +82,10 @@ docker compose up -d --build
 | URL | Service |
 | --- | --- |
 | http://localhost:5173 | Registry portal |
-| http://localhost:5174 | Banking app |
+| http://localhost:5174 | Banking app (transfers + deposits) |
 | http://localhost:8080/actuator/health | platform-api health |
 | http://localhost:8084/swagger-ui/index.html | banking service Swagger |
+| http://localhost:8085/swagger-ui/index.html | deposit service Swagger |
 
 Notes:
 
@@ -166,6 +175,29 @@ Swagger UI:
 
 ```text
 http://localhost:8084/swagger-ui/index.html
+```
+
+## Run Deposit Service
+
+Uses its own PostgreSQL (5434, `deposit_service` DB) and calls the platform (8080)
+and banking (8084) services over HTTP, so start those two first.
+
+```powershell
+$env:JAVA_HOME='C:\Users\basba\.jdk\jdk-17.0.16'
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+$env:DEPOSIT_DB_PASSWORD='deposit_password'
+$env:JWT_SECRET='change-this-dev-only-secret-at-least-32-characters'
+$env:SVC_DEPOSIT_PASSWORD='svc-deposit-demo-123'
+cd backend/deposit-service
+mvn spring-boot:run
+```
+
+`SVC_DEPOSIT_PASSWORD` must match the BCrypt hash seeded in
+platform-api `db/seed-dev/V6` (the demo default above). A wrong value locks the
+service account after 5 tries and breaks payouts. Swagger UI:
+
+```text
+http://localhost:8085/swagger-ui/index.html
 ```
 
 ## Run Registry Portal (frontend)
