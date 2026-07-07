@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:banking_transfer;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration,classpath:db/seed-dev
+
+app:
+  jwt:
+    secret: test-secret-for-banking-tests-at-least-32-chars!!
+  cors:
+    allowed-origins: http://localhost:5173
+  limits:
+    max-per-transfer: 900000000.00
+    daily-outgoing-total: 900000000.00

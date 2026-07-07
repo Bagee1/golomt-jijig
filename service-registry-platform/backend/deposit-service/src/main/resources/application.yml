@@ -1,0 +1,54 @@
+server:
+  port: ${DEPOSIT_SERVICE_PORT:8085}
+
+spring:
+  application:
+    name: deposit-service
+  datasource:
+    url: jdbc:postgresql://${DEPOSIT_DB_HOST:localhost}:${DEPOSIT_DB_PORT:5434}/${DEPOSIT_DB_NAME:deposit_service}
+    username: ${DEPOSIT_DB_USER:deposit_user}
+    password: ${DEPOSIT_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui/index.html
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
+  deposit:
+    settlement-account-no: ${DEPOSIT_SETTLEMENT_ACCOUNT_NO:900000001}
+    min-amount: ${DEPOSIT_MIN_AMOUNT:100000.00}
+    max-amount: ${DEPOSIT_MAX_AMOUNT:3000000.00}
+    products:
+      - term-months: 3
+        annual-rate-percent: 8.0
+      - term-months: 6
+        annual-rate-percent: 10.0
+      - term-months: 12
+        annual-rate-percent: 12.5
+  banking:
+    base-url: ${BANKING_API_URL:http://localhost:8084}
+    connect-timeout-ms: ${BANKING_CONNECT_TIMEOUT_MS:3000}
+    read-timeout-ms: ${BANKING_READ_TIMEOUT_MS:5000}
+  platform:
+    base-url: ${PLATFORM_API_URL:http://localhost:8080}
+    service-username: ${SVC_DEPOSIT_USERNAME:svc-deposit}
+    service-password: ${SVC_DEPOSIT_PASSWORD}
+    connect-timeout-ms: ${PLATFORM_CONNECT_TIMEOUT_MS:3000}
+    read-timeout-ms: ${PLATFORM_READ_TIMEOUT_MS:5000}

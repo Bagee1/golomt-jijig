@@ -1,0 +1,14 @@
+package mn.golomt.banking.audit;
+
+public enum BankAuditAction {
+    TRANSFER_CREATED,
+    TRANSFER_FAILED,
+    TRANSFER_REVERSED,
+    ACCOUNT_OPENED,
+    ACCOUNT_BLOCKED,
+    ACCOUNT_UNBLOCKED,
+    ACCOUNT_CLOSED,
+    CUSTOMER_CREATED,
+    CUSTOMER_UPDATED,
+    CUSTOMER_DEACTIVATED
+}

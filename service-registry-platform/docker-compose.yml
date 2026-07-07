@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: service-registry-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-service_registry}
+      POSTGRES_USER: ${POSTGRES_USER:-registry_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-registry_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-registry_user} -d ${POSTGRES_DB:-service_registry}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  banking-postgres:
+    image: postgres:16-alpine
+    container_name: banking-transfer-postgres
+    environment:
+      POSTGRES_DB: ${BANKING_DB_NAME:-banking_transfer}
+      POSTGRES_USER: ${BANKING_DB_USER:-banking_user}
+      POSTGRES_PASSWORD: ${BANKING_DB_PASSWORD:-banking_password}
+    ports:
+      - "${BANKING_DB_PORT:-5433}:5432"
+    volumes:
+      - banking_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BANKING_DB_USER:-banking_user} -d ${BANKING_DB_NAME:-banking_transfer}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  platform-api:
+    build: ./backend/platform-api
+    container_name: platform-api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-service_registry}
+      POSTGRES_USER: ${POSTGRES_USER:-registry_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-registry_password}
+      JWT_SECRET: ${JWT_SECRET:-change-this-dev-only-secret-at-least-32-characters}
+    ports:
+      - "${PLATFORM_API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  banking-transfer-service:
+    build: ./backend/banking-transfer-service
+    container_name: banking-transfer-service
+    environment:
+      BANKING_DB_HOST: banking-postgres
+      BANKING_DB_PORT: 5432
+      BANKING_DB_NAME: ${BANKING_DB_NAME:-banking_transfer}
+      BANKING_DB_USER: ${BANKING_DB_USER:-banking_user}
+      BANKING_DB_PASSWORD: ${BANKING_DB_PASSWORD:-banking_password}
+      JWT_SECRET: ${JWT_SECRET:-change-this-dev-only-secret-at-least-32-characters}
+    ports:
+      - "8084:8084"
+    depends_on:
+      banking-postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    container_name: registry-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - platform-api
+
+  frontend-banking:
+    build:
+      context: ./frontend-banking
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+        VITE_BANKING_API_URL: ${VITE_BANKING_API_URL:-http://localhost:8084}
+    container_name: banking-frontend
+    ports:
+      - "5174:80"
+    depends_on:
+      - platform-api
+      - banking-transfer-service
+
+volumes:
+  postgres_data:
+  banking_postgres_data:
+

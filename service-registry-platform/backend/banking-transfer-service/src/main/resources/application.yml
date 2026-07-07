@@ -1,0 +1,36 @@
+server:
+  port: ${BANKING_TRANSFER_SERVICE_PORT:8084}
+
+spring:
+  application:
+    name: banking-transfer-service
+  datasource:
+    url: jdbc:postgresql://${BANKING_DB_HOST:localhost}:${BANKING_DB_PORT:5433}/${BANKING_DB_NAME:banking_transfer}
+    username: ${BANKING_DB_USER:banking_user}
+    password: ${BANKING_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration,classpath:db/seed-dev}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui/index.html
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
+  limits:
+    max-per-transfer: ${BANKING_MAX_PER_TRANSFER:5000000.00}
+    daily-outgoing-total: ${BANKING_DAILY_OUTGOING_TOTAL:10000000.00}

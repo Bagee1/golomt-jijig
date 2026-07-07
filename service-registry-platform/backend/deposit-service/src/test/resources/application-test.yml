@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:deposit_service;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: test-secret-for-deposit-tests-at-least-32-chars!!
+  cors:
+    allowed-origins: http://localhost:5174
+  deposit:
+    settlement-account-no: "900000001"
+    min-amount: 100000.00
+    max-amount: 3000000.00
+    products:
+      - term-months: 3
+        annual-rate-percent: 8.0
+      - term-months: 6
+        annual-rate-percent: 10.0
+      - term-months: 12
+        annual-rate-percent: 12.5
+  banking:
+    base-url: http://localhost:18084
+    connect-timeout-ms: 500
+    read-timeout-ms: 1000
+  platform:
+    base-url: http://localhost:18080
+    service-username: svc-deposit
+    service-password: test-service-password
+    connect-timeout-ms: 500
+    read-timeout-ms: 1000
