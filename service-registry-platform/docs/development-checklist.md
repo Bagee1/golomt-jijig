@@ -592,7 +592,7 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 - [x] Д6: Хаах — POST /api/deposits/{id}/close: prepareClose (PESSIMISTIC lock, дүн/close_type-ийг банк дуудахаас ӨМНӨ хадгална), payout нь svc-deposit token-оор (`dep-{no}-payout`), 401-д invalidate+retry once. Matured→CLOSED+хүү, эрт→CLOSED_EARLY+хүү 0, банк унтарсан→PAYOUT_PENDING+502→retry ижил дүн, давхар хаах 409, өөр хэрэглэгч 403. 6 шинэ тест (нийт 29).
 - [x] Д7: Frontend — types/deposit, depositHttpClient (VITE_DEPOSIT_API_URL:8085, DepositApiError), depositErrors (pass-through нь bankErrorMessage-руу fallback), depositApi (8 функц), format+Chips (DepositStatusChip), nav «Хадгаламж»+admin «Хадгаламжийн бүртгэл», DepositsPage (бүтээгдэхүүний картууд + миний хадгаламжууд), /deposits route. tsc+lint+build цэвэр.
 - [x] Д8: Frontend — NewDepositPage (өөрийн данс сонгох, хугацаа/хүү, client-side урьдчилсан хүү «сервер эцэслэнэ», crypto.randomUUID key, амжилтын panel), DepositDetailPage (үлдсэн хоног, статусаар товч: хаах/эрт хаах ConfirmDialog «хүү 0₮» анхааруулгатай + retry-funding/retry-payout), DepositsAdminPage (username filter + Pagination), 4 route. tsc+lint+build цэвэр.
-- [ ] Д9: Infra — Dockerfile, compose (deposit-postgres 5434 + deposit-service 8085 + VITE_DEPOSIT_API_URL), .env.example, CI (deposit + frontend-banking job).
+- [x] Д9: Infra — deposit-service Dockerfile (EXPOSE 8085), compose (deposit-postgres 5434 + volume + healthcheck, deposit-service 8085 env: DB/JWT/BANKING_API_URL/PLATFORM_API_URL/SVC creds/depends_on, frontend-banking-д VITE_DEPOSIT_API_URL build arg), .env.example DEPOSIT_* блок, CI: deposit-service job + дутуу байсан frontend-banking job, branch main. compose config valid, deposit+frontend-banking image build амжилттай.
 - [ ] Д10: Docs — deposit-api-contract.md, DBRD, README.
 - [ ] Д11: E2E demo (нээх→үлдэгдэл буурах→эрт/хугацаатай хаах→502 сэргэлт→registry CALLS) + Verification log.
 
@@ -693,6 +693,7 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 | 2026-07-08 | `mvn test` (deposit хаах урсгал нэмсний дараа) | PASS | 29 тест: matured→CLOSED хүү 125,000 (settlement→данс, svc token, key баталгаажсан), эрт→CLOSED_EARLY хүү 0, 502→PAYOUT_PENDING→retry CLOSED ижил дүн, 401→invalidate+retry, давхар 409, өөр хэрэглэгч 403 (SqlMergeMode.MERGE-ээр seed цэвэрлэгээ засав) |
 | 2026-07-08 | `npx tsc -b` + `npm run lint` + `npm run build` (deposit frontend API+DepositsPage) | PASS | frontend-banking 1816 модуль, oxlint цэвэр |
 | 2026-07-08 | `npx tsc -b` + `npm run lint` + `npm run build` (NewDeposit/Detail/Admin хуудсууд) | PASS | 309KB bundle, oxlint цэвэр — хадгаламжийн бүрэн UI урсгал |
+| 2026-07-08 | `docker compose config` + `docker compose build deposit-service frontend-banking` | PASS | compose syntax зөв (3 backend + 3 Postgres + 2 frontend); deposit multi-stage build ба frontend-banking (VITE_DEPOSIT_API_URL-тэй) build амжилттай |
 
 ## 8. Files created so far
 

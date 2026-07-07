@@ -33,6 +33,23 @@ services:
       timeout: 5s
       retries: 5
 
+  deposit-postgres:
+    image: postgres:16-alpine
+    container_name: deposit-service-postgres
+    environment:
+      POSTGRES_DB: ${DEPOSIT_DB_NAME:-deposit_service}
+      POSTGRES_USER: ${DEPOSIT_DB_USER:-deposit_user}
+      POSTGRES_PASSWORD: ${DEPOSIT_DB_PASSWORD:-deposit_password}
+    ports:
+      - "${DEPOSIT_DB_PORT:-5434}:5432"
+    volumes:
+      - deposit_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DEPOSIT_DB_USER:-deposit_user} -d ${DEPOSIT_DB_NAME:-deposit_service}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   platform-api:
     build: ./backend/platform-api
     container_name: platform-api
@@ -65,6 +82,30 @@ services:
       banking-postgres:
         condition: service_healthy
 
+  deposit-service:
+    build: ./backend/deposit-service
+    container_name: deposit-service
+    environment:
+      DEPOSIT_DB_HOST: deposit-postgres
+      DEPOSIT_DB_PORT: 5432
+      DEPOSIT_DB_NAME: ${DEPOSIT_DB_NAME:-deposit_service}
+      DEPOSIT_DB_USER: ${DEPOSIT_DB_USER:-deposit_user}
+      DEPOSIT_DB_PASSWORD: ${DEPOSIT_DB_PASSWORD:-deposit_password}
+      JWT_SECRET: ${JWT_SECRET:-change-this-dev-only-secret-at-least-32-characters}
+      BANKING_API_URL: http://banking-transfer-service:8084
+      PLATFORM_API_URL: http://platform-api:8080
+      SVC_DEPOSIT_USERNAME: ${SVC_DEPOSIT_USERNAME:-svc-deposit}
+      SVC_DEPOSIT_PASSWORD: ${SVC_DEPOSIT_PASSWORD:-svc-deposit-demo-123}
+    ports:
+      - "8085:8085"
+    depends_on:
+      deposit-postgres:
+        condition: service_healthy
+      platform-api:
+        condition: service_started
+      banking-transfer-service:
+        condition: service_started
+
   frontend:
     build:
       context: ./frontend
@@ -82,14 +123,17 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
         VITE_BANKING_API_URL: ${VITE_BANKING_API_URL:-http://localhost:8084}
+        VITE_DEPOSIT_API_URL: ${VITE_DEPOSIT_API_URL:-http://localhost:8085}
     container_name: banking-frontend
     ports:
       - "5174:80"
     depends_on:
       - platform-api
       - banking-transfer-service
+      - deposit-service
 
 volumes:
   postgres_data:
   banking_postgres_data:
+  deposit_postgres_data:
 
