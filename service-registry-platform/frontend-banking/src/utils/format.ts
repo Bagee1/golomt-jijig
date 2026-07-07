@@ -1,4 +1,5 @@
 import type { AccountStatus, BankAuditAction, TransferStatus } from '../types/banking'
+import type { DepositStatus } from '../types/deposit'
 
 export function formatDateTime(value: string) {
   return new Intl.DateTimeFormat('mn-MN', {
@@ -39,4 +40,16 @@ export function accountStatusLabel(status: AccountStatus) {
 
 export function bankActionLabel(action: BankAuditAction) {
   return action.replaceAll('_', ' ')
+}
+
+export function depositStatusLabel(status: DepositStatus) {
+  const labels: Record<DepositStatus, string> = {
+    FUNDING: 'Санхүүжилт хүлээгдэж буй',
+    OPEN: 'Идэвхтэй',
+    PAYOUT_PENDING: 'Эргэн төлөлт хүлээгдэж буй',
+    CLOSED: 'Хаагдсан',
+    CLOSED_EARLY: 'Хугацаанаас өмнө хаагдсан',
+    CANCELLED: 'Цуцлагдсан',
+  }
+  return labels[status]
 }

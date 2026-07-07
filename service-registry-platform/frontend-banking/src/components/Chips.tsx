@@ -1,5 +1,6 @@
 import type { AccountStatus, BankAuditAction, TransferStatus } from '../types/banking'
-import { accountStatusLabel, bankActionLabel, transferStatusLabel } from '../utils/format'
+import type { DepositStatus } from '../types/deposit'
+import { accountStatusLabel, bankActionLabel, depositStatusLabel, transferStatusLabel } from '../utils/format'
 
 interface ChipProps {
   children: string | number
@@ -20,6 +21,16 @@ export function TransferStatusChip({ status, compact = false }: { status: Transf
 export function AccountStatusChip({ status, compact = false }: { status: AccountStatus; compact?: boolean }) {
   const tone: ChipProps['tone'] = status === 'ACTIVE' ? 'green' : status === 'BLOCKED' ? 'amber' : 'gray'
   return <Chip tone={tone} compact={compact}>{accountStatusLabel(status)}</Chip>
+}
+
+export function DepositStatusChip({ status, compact = false }: { status: DepositStatus; compact?: boolean }) {
+  const tone: ChipProps['tone'] =
+    status === 'OPEN' ? 'green'
+      : status === 'FUNDING' || status === 'PAYOUT_PENDING' ? 'amber'
+        : status === 'CLOSED_EARLY' ? 'violet'
+          : status === 'CANCELLED' ? 'red'
+            : 'gray'
+  return <Chip tone={tone} compact={compact}>{depositStatusLabel(status)}</Chip>
 }
 
 export function BankAuditActionChip({ action }: { action: BankAuditAction }) {

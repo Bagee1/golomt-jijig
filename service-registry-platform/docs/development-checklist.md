@@ -590,7 +590,7 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 - [x] Д4: BankingClient (RestClient, timeout, `{code,message}`→BankingApiException, 401→Unauthorized, IO→Unavailable) + PlatformAuthClient + ServiceTokenProvider (кэш+60с skew+invalidate); MockRestServiceServer-ээр 6 тест.
 - [x] Д5: Нээх урсгал — POST /api/deposits (client Idempotency-Key replay 200, `dep-{no}-fund`, хэрэглэгчийн token дамжуулна), retry-funding, /my, /{id} (owner|ADMIN), admin list, deposit audit (REQUIRES_NEW). Business error → CANCELLED + code pass-through, банк унтарсан → FUNDING хэвээр + 502. 8 шинэ тест (нийт 23).
 - [x] Д6: Хаах — POST /api/deposits/{id}/close: prepareClose (PESSIMISTIC lock, дүн/close_type-ийг банк дуудахаас ӨМНӨ хадгална), payout нь svc-deposit token-оор (`dep-{no}-payout`), 401-д invalidate+retry once. Matured→CLOSED+хүү, эрт→CLOSED_EARLY+хүү 0, банк унтарсан→PAYOUT_PENDING+502→retry ижил дүн, давхар хаах 409, өөр хэрэглэгч 403. 6 шинэ тест (нийт 29).
-- [ ] Д7: Frontend — depositHttpClient/depositApi/depositErrors, nav «Хадгаламж», DepositsPage.
+- [x] Д7: Frontend — types/deposit, depositHttpClient (VITE_DEPOSIT_API_URL:8085, DepositApiError), depositErrors (pass-through нь bankErrorMessage-руу fallback), depositApi (8 функц), format+Chips (DepositStatusChip), nav «Хадгаламж»+admin «Хадгаламжийн бүртгэл», DepositsPage (бүтээгдэхүүний картууд + миний хадгаламжууд), /deposits route. tsc+lint+build цэвэр.
 - [ ] Д8: Frontend — NewDepositPage (урьдчилсан хүү), DepositDetailPage (хаах/retry товч), DepositsAdminPage.
 - [ ] Д9: Infra — Dockerfile, compose (deposit-postgres 5434 + deposit-service 8085 + VITE_DEPOSIT_API_URL), .env.example, CI (deposit + frontend-banking job).
 - [ ] Д10: Docs — deposit-api-contract.md, DBRD, README.
@@ -691,6 +691,7 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 | 2026-07-08 | `mvn test` (deposit HTTP client нэмсний дараа) | PASS | 15 тест: transfer 201/200 амжилт + header, INSUFFICIENT_FUNDS code mapping, 401 Unauthorized; token кэш нэг login, invalidate шинэ login |
 | 2026-07-08 | `mvn test` (deposit нээх урсгал нэмсний дараа) | PASS | 23 тест: нээх→OPEN (from=account/to=settlement/key/token баталгаажсан), INSUFFICIENT_FUNDS→CANCELLED, банк унтарсан→FUNDING+502→retry OPEN, client key replay 200 нэг л transfer, PRODUCT_NOT_FOUND/AMOUNT_OUT_OF_RANGE 400, эзэмшил 403, admin list, audit DEPOSIT_OPENED |
 | 2026-07-08 | `mvn test` (deposit хаах урсгал нэмсний дараа) | PASS | 29 тест: matured→CLOSED хүү 125,000 (settlement→данс, svc token, key баталгаажсан), эрт→CLOSED_EARLY хүү 0, 502→PAYOUT_PENDING→retry CLOSED ижил дүн, 401→invalidate+retry, давхар 409, өөр хэрэглэгч 403 (SqlMergeMode.MERGE-ээр seed цэвэрлэгээ засав) |
+| 2026-07-08 | `npx tsc -b` + `npm run lint` + `npm run build` (deposit frontend API+DepositsPage) | PASS | frontend-banking 1816 модуль, oxlint цэвэр |
 
 ## 8. Files created so far
 

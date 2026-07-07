@@ -7,6 +7,7 @@ import { AccountsAdminPage } from './pages/AccountsAdminPage'
 import { BankAuditLogPage } from './pages/BankAuditLogPage'
 import { CustomerFormPage } from './pages/CustomerFormPage'
 import { CustomersPage } from './pages/CustomersPage'
+import { DepositsPage } from './pages/DepositsPage'
 import { LoginPage } from './pages/LoginPage'
 import { NewTransferPage } from './pages/NewTransferPage'
 import { OverviewPage } from './pages/OverviewPage'
@@ -42,6 +43,7 @@ function BankingRoutes() {
       <Route path="/transfers" element={<TransfersPage />} />
       <Route path="/transfers/new" element={<NewTransferPage />} />
       <Route path="/transfers/:id" element={<TransferDetailPage />} />
+      <Route path="/deposits" element={<DepositsPage />} />
       <Route path="/admin/customers" element={<AdminRoute><CustomersPage /></AdminRoute>} />
       <Route path="/admin/customers/new" element={<AdminRoute><CustomerFormPage /></AdminRoute>} />
       <Route path="/admin/customers/:id" element={<AdminRoute><CustomerFormPage /></AdminRoute>} />

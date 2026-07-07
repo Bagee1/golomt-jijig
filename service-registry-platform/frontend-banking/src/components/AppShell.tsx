@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Landmark, LogOut, ScrollText, Search, Users, Wallet } from 'lucide-react'
+import { ArrowLeftRight, Banknote, Landmark, LogOut, PiggyBank, ScrollText, Search, Users, Wallet } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
@@ -11,11 +11,13 @@ const customerNavItems = [
   { label: 'Нүүр', href: '/', icon: Landmark },
   { label: 'Данс хайх', href: '/accounts', icon: Search },
   { label: 'Гүйлгээнүүд', href: '/transfers', icon: ArrowLeftRight },
+  { label: 'Хадгаламж', href: '/deposits', icon: PiggyBank },
 ]
 
 const adminNavItems = [
   { label: 'Харилцагчид', href: '/admin/customers', icon: Users },
   { label: 'Данс удирдлага', href: '/admin/accounts', icon: Wallet },
+  { label: 'Хадгаламжийн бүртгэл', href: '/admin/deposits', icon: Banknote },
   { label: 'Аудит лог', href: '/admin/audit-logs', icon: ScrollText },
 ]
 
