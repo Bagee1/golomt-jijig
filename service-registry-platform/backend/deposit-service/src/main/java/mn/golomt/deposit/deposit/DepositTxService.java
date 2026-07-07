@@ -9,7 +9,10 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import mn.golomt.deposit.audit.DepositAuditAction;
 import mn.golomt.deposit.audit.DepositAuditService;
+import mn.golomt.deposit.common.ConflictException;
+import mn.golomt.deposit.common.CurrentUser;
 import mn.golomt.deposit.common.ErrorCode;
+import mn.golomt.deposit.common.ForbiddenException;
 import mn.golomt.deposit.common.ResourceNotFoundException;
 import mn.golomt.deposit.deposit.dto.DepositOpenRequest;
 import org.springframework.stereotype.Service;
@@ -89,6 +92,93 @@ public class DepositTxService {
             Map.of("depositNo", saved.getDepositNo(), "failureReason", failureReason)
         );
         return saved;
+    }
+
+    /**
+     * Locks the deposit and moves it toward payout. Interest, payout amount and close
+     * type are computed and PERSISTED here — before any bank call — so a retry after the
+     * maturity boundary reuses the same figures and can never disagree with banking's
+     * idempotent replay. Reused as-is when the row is already PAYOUT_PENDING (retry).
+     */
+    @Transactional
+    public Deposit prepareClose(Long depositId, CurrentUser actor) {
+        Deposit deposit = depositRepository.findByIdForUpdate(depositId)
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.DEPOSIT_NOT_FOUND, "Deposit not found: " + depositId));
+
+        if (!actor.isAdmin() && !actor.username().equals(deposit.getCustomerUsername())) {
+            throw new ForbiddenException(ErrorCode.FORBIDDEN, "Not your deposit: " + deposit.getDepositNo());
+        }
+
+        return switch (deposit.getStatus()) {
+            case OPEN -> {
+                boolean matured = !deposit.getMaturityDate().isAfter(LocalDate.now(clock));
+                BigDecimal interest = matured
+                    ? InterestCalculator.interestFor(
+                        deposit.getPrincipal(),
+                        deposit.getAnnualRate(),
+                        deposit.getOpenedAt().toLocalDate(),
+                        deposit.getMaturityDate())
+                    : BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY);
+
+                deposit.setCloseType(matured ? CloseType.MATURED : CloseType.EARLY);
+                deposit.setInterestAmount(interest);
+                deposit.setPayoutAmount(deposit.getPrincipal().add(interest));
+                deposit.setStatus(DepositStatus.PAYOUT_PENDING);
+                yield depositRepository.save(deposit);
+            }
+            case PAYOUT_PENDING -> deposit; // retry: reuse the already-persisted amounts
+            case CLOSED, CLOSED_EARLY -> throw new ConflictException(ErrorCode.DEPOSIT_ALREADY_CLOSED,
+                "Deposit already closed: " + deposit.getDepositNo());
+            case FUNDING, CANCELLED -> throw new ConflictException(ErrorCode.INVALID_STATUS_TRANSITION,
+                "Deposit cannot be closed from status " + deposit.getStatus() + ": " + deposit.getDepositNo());
+        };
+    }
+
+    @Transactional
+    public Deposit markClosed(Long depositId, String payoutTransferRef) {
+        Deposit deposit = load(depositId);
+        DepositStatus finalStatus = deposit.getCloseType() == CloseType.EARLY
+            ? DepositStatus.CLOSED_EARLY
+            : DepositStatus.CLOSED;
+        deposit.setStatus(finalStatus);
+        deposit.setPayoutTransferRef(payoutTransferRef);
+        deposit.setClosedAt(OffsetDateTime.now(clock));
+        deposit.setFailureReason(null);
+        Deposit saved = depositRepository.save(deposit);
+
+        DepositAuditAction action = finalStatus == DepositStatus.CLOSED_EARLY
+            ? DepositAuditAction.DEPOSIT_CLOSED_EARLY
+            : DepositAuditAction.DEPOSIT_CLOSED;
+        depositAuditService.record(
+            action,
+            "DEPOSIT",
+            saved.getId(),
+            "Хадгаламж хаагдаж эргэн төлөгдсөн: " + saved.getDepositNo(),
+            Map.of(
+                "depositNo", saved.getDepositNo(),
+                "closeType", saved.getCloseType().name(),
+                "interest", saved.getInterestAmount(),
+                "payout", saved.getPayoutAmount(),
+                "payoutTransferRef", payoutTransferRef
+            )
+        );
+        return saved;
+    }
+
+    /** Records a failed payout; the row stays PAYOUT_PENDING so close can be retried. */
+    @Transactional
+    public void markPayoutFailed(Long depositId, String failureReason) {
+        Deposit deposit = load(depositId);
+        deposit.setFailureReason(failureReason);
+        depositRepository.save(deposit);
+
+        depositAuditService.record(
+            DepositAuditAction.DEPOSIT_PAYOUT_FAILED,
+            "DEPOSIT",
+            deposit.getId(),
+            "Хадгаламжийн эргэн төлөлт амжилтгүй: " + deposit.getDepositNo() + " (" + failureReason + ")",
+            Map.of("depositNo", deposit.getDepositNo(), "failureReason", failureReason)
+        );
     }
 
     private Deposit load(Long depositId) {

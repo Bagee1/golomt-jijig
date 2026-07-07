@@ -65,6 +65,11 @@ public class DepositController {
         return depositService.retryFunding(id);
     }
 
+    @PostMapping("/{id}/close")
+    public DepositResponse close(@PathVariable Long id) {
+        return depositService.close(id);
+    }
+
     @GetMapping("/my")
     public PageResponse<DepositResponse> myDeposits(
         @RequestParam(defaultValue = "0") int page,

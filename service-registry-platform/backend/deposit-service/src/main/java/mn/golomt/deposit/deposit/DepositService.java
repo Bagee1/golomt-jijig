@@ -12,7 +12,9 @@ import mn.golomt.deposit.client.BankTransferCommand;
 import mn.golomt.deposit.client.BankTransferResult;
 import mn.golomt.deposit.client.BankingApiException;
 import mn.golomt.deposit.client.BankingClient;
+import mn.golomt.deposit.client.BankingUnauthorizedException;
 import mn.golomt.deposit.client.BankingUnavailableException;
+import mn.golomt.deposit.client.ServiceTokenProvider;
 import mn.golomt.deposit.common.AuthFacade;
 import mn.golomt.deposit.common.BadRequestException;
 import mn.golomt.deposit.common.ConflictException;
@@ -37,6 +39,7 @@ public class DepositService {
     private final DepositTxService depositTxService;
     private final DepositAuditService depositAuditService;
     private final BankingClient bankingClient;
+    private final ServiceTokenProvider serviceTokenProvider;
     private final AuthFacade authFacade;
     private final DepositProperties properties;
     private final Clock clock;
@@ -82,8 +85,8 @@ public class DepositService {
             Deposit opened = depositTxService.markOpen(deposit.getId(), result.transferRef());
             return DepositResponse.of(opened, clock);
         } catch (BankingApiException exception) {
-            Deposit cancelled = depositTxService.markCancelled(deposit.getId(), exception.getCode());
-            throw mapBankingError(exception, ErrorCode.FUNDING_FAILED, cancelled);
+            depositTxService.markCancelled(deposit.getId(), exception.getCode());
+            throw mapBankingError(exception, ErrorCode.FUNDING_FAILED, deposit.getDepositNo());
         } catch (BankingUnavailableException exception) {
             // Row stays FUNDING; the caller (or POST /{id}/retry-funding) can retry safely.
             depositAuditService.record(
@@ -95,6 +98,49 @@ public class DepositService {
             );
             throw new ServiceUnavailableException(ErrorCode.BANKING_UNAVAILABLE,
                 "Банкны гүйлгээний систем түр ажиллахгүй байна — дараа дахин оролдоно уу");
+        }
+    }
+
+    /**
+     * Closes a deposit and pays principal (+ interest if matured) back from the
+     * settlement account, using the svc-deposit service token — the customer cannot
+     * transfer out of the settlement account, but svc-deposit owns it in banking.
+     */
+    public DepositResponse close(Long depositId) {
+        CurrentUser actor = authFacade.currentUser();
+        Deposit prepared = depositTxService.prepareClose(depositId, actor);
+
+        boolean hasInterest = prepared.getInterestAmount() != null
+            && prepared.getInterestAmount().signum() > 0;
+        BankTransferCommand command = new BankTransferCommand(
+            properties.settlementAccountNo(),
+            prepared.getLinkedAccountNo(),
+            prepared.getPayoutAmount(),
+            "Хадгаламж " + prepared.getDepositNo() + " эргэн төлөлт" + (hasInterest ? " (үндсэн + хүү)" : " (үндсэн)")
+        );
+        String idempotencyKey = "dep-" + prepared.getDepositNo() + "-payout";
+
+        try {
+            BankTransferResult result = transferWithServiceToken(command, idempotencyKey);
+            Deposit closed = depositTxService.markClosed(depositId, result.transferRef());
+            return DepositResponse.of(closed, clock);
+        } catch (BankingApiException exception) {
+            depositTxService.markPayoutFailed(depositId, exception.getCode());
+            throw mapBankingError(exception, ErrorCode.PAYOUT_FAILED, prepared.getDepositNo());
+        } catch (BankingUnavailableException exception) {
+            depositTxService.markPayoutFailed(depositId, ErrorCode.BANKING_UNAVAILABLE.name());
+            throw new ServiceUnavailableException(ErrorCode.BANKING_UNAVAILABLE,
+                "Банкны гүйлгээний систем түр ажиллахгүй байна — дараа дахин оролдоно уу");
+        }
+    }
+
+    /** Settlement payouts run as svc-deposit; on a 401 refresh the token and retry once. */
+    private BankTransferResult transferWithServiceToken(BankTransferCommand command, String idempotencyKey) {
+        try {
+            return bankingClient.transfer(command, serviceTokenProvider.token(), idempotencyKey);
+        } catch (BankingUnauthorizedException exception) {
+            serviceTokenProvider.invalidate();
+            return bankingClient.transfer(command, serviceTokenProvider.token(), idempotencyKey);
         }
     }
 
@@ -154,9 +200,9 @@ public class DepositService {
      * Maps a banking business error to a deposit-side exception, passing banking's
      * machine code through when it belongs to the shared pass-through set.
      */
-    private RuntimeException mapBankingError(BankingApiException exception, ErrorCode fallback, Deposit cancelled) {
-        log.info("Deposit {} funding rejected by banking: {} {}",
-            cancelled.getDepositNo(), exception.getCode(), exception.getMessage());
+    private RuntimeException mapBankingError(BankingApiException exception, ErrorCode fallback, String depositNo) {
+        log.info("Deposit {} rejected by banking: {} {}",
+            depositNo, exception.getCode(), exception.getMessage());
         ErrorCode code = parseCode(exception.getCode(), fallback);
         if (code == ErrorCode.FORBIDDEN_ACCOUNT) {
             return new ForbiddenException(code, exception.getMessage());
