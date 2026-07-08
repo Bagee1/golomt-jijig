@@ -580,7 +580,7 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 
 - [ ] Каталогт бүртгэх: нэр/type CORE/base-health-swagger URL (8085)/хөгжүүлэгч/үнэлгээ/inUse.
 - [ ] Relation: Deposit Service `CALLS` Banking Transfer Service.
-- [ ] Security checklist бөглөж score авах; аудит бичлэгүүд үүссэнийг нягтлах.
+- [x] Security checklist бөглөж score авах (demo seed V7): deposit 88, banking 83, card 40, digital 28 — dashboard дундаж 60, «анхаарал шаардтай»-д зөвхөн card/digital.
 - [ ] Health check ногоон эсэхийг R1/R3-аар шалгах.
 
 ### 4.14. Deposit Service — хугацаатай хадгаламжийн 3 дахь microservice (2026-07-08 төлөвлөгөө)
@@ -702,6 +702,7 @@ Deposit-service онбординг (registry талаас, кодгүй — се
 | 2026-07-08 | Deposit e2e (matured хаалт) | PASS | DEP-5002 backdate 365 хоног @12.5% → CLOSED хүү 37,500 payout 337,500, үлдэгдэл→1,037,500 |
 | 2026-07-08 | Deposit e2e (банк унтарсан failure/recovery) | PASS | banking stop→нээх 502 BANKING_UNAVAILABLE, мөр FUNDING хэвээр; banking start→retry-funding OPEN + funding ref |
 | 2026-07-08 | Registry integration шалгалт | PASS | admin `GET /api/systems`-д deposit-service (CORE, 8085) + deposit→banking CALLS relation бодит; deposit audit-д OPENED/FUNDING_FAILED/CLOSED/CLOSED_EARLY бичигдсэн |
+| 2026-07-08 | Demo security checklist seed (platform V7) + platform-api rebuild | PASS | `mvn test` 37 ногоон; `/api/security-scores` = deposit 88 / banking 83 / card 40 / digital 28; dashboard дундаж 60, анхаарал шаардтай жагсаалтад зөвхөн card/digital (playwright screenshot) |
 
 ## 8. Files created so far
 
